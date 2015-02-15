@@ -28,6 +28,8 @@ import scala.Serializable;
 import scala.Tuple2;
 
 public class Test implements Serializable {
+
+  private final static Integer INTERVAL_THRESHOLD = 5;
 	
   private static Integer byteArrToInteger(byte[] bytes) {
 	  
@@ -133,11 +135,30 @@ public class Test implements Serializable {
     
 
     
-    JavaPairRDD<Integer, List<Integer>> counts = pairRdd.combineByKey(combiner, merger, mergeCombiner);
-    List<Tuple2<Integer, List<Integer>>> output = counts.collect();
+    JavaPairRDD<Integer, List<Integer>> idTimePairs = pairRdd.combineByKey(combiner, merger, mergeCombiner);
     
+    List<Tuple2<Integer, List<Integer>>> idTimeTuple = idTimePairs.collect();
+    for (Tuple2 tuple : idTimeTuple) {
+    	System.out.println(tuple._1 + ": " + tuple._2);
+    }
+
+    Function<Tuple2<Integer, List<Integer>>, Boolean> getFake = new Function<Tuple2<Integer, List<Integer>>, Boolean>() {
+    	public Boolean call(Tuple2<Integer, List<Integer>> pairs) {
+    		for(int i = 0; i < pairs._2.size()-1; i++) {
+    			if(pairs._2.get(i+1) - pairs._2.get(i) <= INTERVAL_THRESHOLD) {
+    				return true;
+    			}
+    		}
+    		return false;
+    	}
+    };
+    
+    JavaPairRDD<Integer,List<Integer>> fakeNumbers = idTimePairs.filter(getFake);
+   
+    List<Tuple2<Integer, List<Integer>>> result = fakeNumbers.collect();
+        
        
-    for (Tuple2 tuple : output) {
+    for (Tuple2 tuple : result) {
     	System.out.println(tuple._1 + ": " + tuple._2);
     }
     
